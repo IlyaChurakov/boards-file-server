@@ -1,4 +1,5 @@
 {
+  "main": "src/server.ts",
   "scripts": {
     "dev": "tsnd --respawn src/server.ts",
     "build": "tsc"
