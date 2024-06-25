@@ -27,7 +27,7 @@ const storage = multer.diskStorage({
     cb(null, staticDir);
   },
   filename: (req, file, cb) => {
-    cb(null, file.originalname);
+    cb(null, file.originalname + Date.now());
   },
 });
 const upload = multer({
@@ -51,9 +51,13 @@ app.post(
 
       const uploadedFiles = (req.files as Express.Multer.File[]).map(
         (file) => ({
-          name: file.originalname,
-          path: `${process.env.BASE_URL}:${process.env.PORT}/` + file.filename,
-          size: file.size,
+          fileName: file.originalname,
+          filePath:
+            `${process.env.BASE_URL}:${process.env.PORT}/` + file.filename,
+          fileSize: file.size,
+          fileExtension: file.originalname.slice(
+            file.originalname.lastIndexOf(".") + 1
+          ),
         })
       );
 
