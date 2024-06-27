@@ -5,6 +5,7 @@ import fs from "fs";
 import morgan from "morgan";
 import cors from "cors";
 import dotenv from "dotenv";
+import sharp from "sharp";
 
 dotenv.config();
 
@@ -42,26 +43,68 @@ const upload = multer({
 
 app.use(morgan("dev"));
 
+const imageExtensions = [
+  "jpg",
+  "jpeg",
+  "webp",
+  "png",
+  "heic",
+  "JPG",
+  "JPEG",
+  "WEBP",
+  "PNG",
+  "HEIC",
+];
+
 app.post(
   "/api/files/",
   upload.array("files"),
-  (req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
+    const files = req.files as Express.Multer.File[];
+
     try {
-      if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
+      if (!files || files.length === 0) {
         throw new Error("No files");
       }
 
-      const uploadedFiles = (req.files as Express.Multer.File[]).map(
-        (file) => ({
-          fileName: file.originalname,
+      let uploadedFiles = [];
+
+      for (let i in files) {
+        const fileNameWithoutExtension = files[i].originalname.slice(
+          0,
+          files[i].originalname.lastIndexOf("."),
+        );
+
+        const fileExtension = files[i].originalname.slice(
+          files[i].originalname.lastIndexOf(".") + 1,
+        );
+
+        let compressedPath;
+
+        if (imageExtensions.includes(fileExtension)) {
+          compressedPath = staticDir + "/" + `${fileNameWithoutExtension}.webp`;
+
+          await sharp(files[i].path)
+            .withMetadata()
+            .webp({ quality: 10 })
+            .toFile(compressedPath);
+        }
+
+        uploadedFiles.push({
+          fileName: files[i].originalname,
           filePath:
-            `${process.env.BASE_URL}:${process.env.PORT}/` + file.filename,
-          fileSize: file.size,
-          fileExtension: file.originalname.slice(
-            file.originalname.lastIndexOf(".") + 1,
-          ),
-        }),
-      );
+            `${process.env.BASE_URL}:${process.env.PORT}/` + files[i].filename,
+          compressedFilePath: compressedPath
+            ? `${process.env.BASE_URL}:${process.env.PORT}/` +
+              `${fileNameWithoutExtension}.webp`
+            : null,
+          compressedFileName: compressedPath
+            ? `${fileNameWithoutExtension}.webp`
+            : null,
+          fileSize: files[i].size,
+          fileExtension,
+        });
+      }
 
       res.status(200).json({
         message: "Файл загружен",
