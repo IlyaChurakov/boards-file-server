@@ -70,6 +70,10 @@ app.post(
       let uploadedFiles = [];
 
       for (let i in files) {
+        const originalName = Buffer.from(
+          files[i].originalname,
+          "latin1",
+        ).toString("utf8");
         const fileNameWithoutExtension = files[i].originalname.slice(
           0,
           files[i].originalname.lastIndexOf("."),
@@ -91,7 +95,7 @@ app.post(
         }
 
         uploadedFiles.push({
-          fileName: files[i].originalname,
+          fileName: originalName,
           filePath:
             `${process.env.BASE_URL}:${process.env.PORT}/` + files[i].filename,
           compressedFilePath: compressedPath
