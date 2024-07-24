@@ -34,27 +34,40 @@ const storage = multer.diskStorage({
   },
 });
 
+const imageExtensions = [
+  ".jpg",
+  ".jpeg",
+  ".webp",
+  ".png",
+  ".heic",
+  ".JPG",
+  ".JPEG",
+  ".WEBP",
+  ".PNG",
+  ".HEIC",
+];
+
 const upload = multer({
   storage: storage,
-  limits: {
-    fileSize: 200 * 1024 * 1024, // 20 MB
+  // limits: {
+  //   fileSize: 200 * 1024 * 1024, // 20 MB
+  // },
+  fileFilter: (req, file, callback) => {
+    // if (!imageExtensions.includes(path.extname(file.originalname)))
+    //   return callback(new Error("Недопустимое расширение файла"));
+
+    const header = req.headers["content-length"];
+    if (!header) return;
+
+    const fileSize = parseInt(header);
+    if (fileSize > 1048576 * 20)
+      return callback(new Error("File size is too large"));
+
+    callback(null, true);
   },
 });
 
 app.use(morgan("dev"));
-
-const imageExtensions = [
-  "jpg",
-  "jpeg",
-  "webp",
-  "png",
-  "heic",
-  "JPG",
-  "JPEG",
-  "WEBP",
-  "PNG",
-  "HEIC",
-];
 
 app.post(
   "/api/files/",
@@ -79,19 +92,19 @@ app.post(
           files[i].originalname.lastIndexOf("."),
         );
 
-        const fileExtension = files[i].originalname.slice(
-          files[i].originalname.lastIndexOf(".") + 1,
-        );
+        const fileExtension = path.extname(files[i].originalname);
 
         let compressedPath;
 
         if (imageExtensions.includes(fileExtension)) {
           compressedPath = staticDir + "/" + `${fileNameWithoutExtension}.webp`;
 
-          await sharp(files[i].path)
-            .withMetadata()
-            .webp({ quality: 10 })
-            .toFile(compressedPath);
+          try {
+            await sharp(files[i].path)
+              .withMetadata()
+              .webp({ quality: 10 })
+              .toFile(compressedPath);
+          } catch (e) {}
         }
 
         uploadedFiles.push({
@@ -115,6 +128,7 @@ app.post(
         files: uploadedFiles,
       });
     } catch (err) {
+      console.log(err);
       return res.status(500).send(err);
     }
   },
